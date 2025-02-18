@@ -1,0 +1,31 @@
+
+
+# 바이낸스 API 설정
+binance:
+  live:  # 실제 거래 환경
+    api_key: ""      # 실제 거래용 API 키
+    secret_key: ""   # 실제 거래용 Secret 키
+  testnet:  # 테스트넷 환경
+    api_key: ""      # 테스트넷용 API 키
+    secret_key: ""   # 테스트넷용 Secret 키
+
+# LLM API 설정
+openai:
+  api_key: ""        # OpenAI GPT-4 API 키
+  model: "gpt-4"     # 사용할 모델명
+
+groq:
+  api_key: ""        # Groq Mixtral API 키
+  model: "mixtral-8x7b-32768"  # 고성능 오픈소스 모델
+
+# 거래 설정
+trading:
+  symbol: "BTC/USDT"  # 거래 페어
+  interval: 5         # 분석 주기 (초)
+  min_amount: 0.001   # 최소 거래량
+  max_amount: 1.0     # 최대 거래량
+  
+# LLM 설정
+llm:
+  temperature: 0.7    # 응답 다양성 (0-1)
+  max_tokens: 1000    # 최대 토큰 수 

@@ -1,0 +1,10 @@
+services:
+  trading-bot:
+    build: .
+    container_name: crypto-trading-bot
+    ports:
+      - "8501:8501"  # 호스트:컨테이너 포트 매핑
+    volumes:
+      - .:/app
+      - ./v_2/utils/config.yaml:/app/v_2/utils/config.yaml  # config.yaml 파일 명시적 마운트
+    command: streamlit run dashboard/Home.py --server.address=0.0.0.0 

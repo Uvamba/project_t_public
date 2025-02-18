@@ -1,0 +1,11 @@
+ccxt==4.4.58
+openai==0.27.0
+streamlit==1.19.0
+numpy==1.23.5  # numpy 버전 명시
+pandas==1.5.3
+plotly==5.13.1
+pyyaml==6.0
+python-dotenv==1.0.0
+requests==2.31.0  # Graph API 요청용 
+altair==4.2.2  # 이 버전으로 명시 
+groq>=0.4.0  # 0.3.0 버전은 존재하지 않으므로 0.4.0 이상으로 변경 

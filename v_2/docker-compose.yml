@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  trading-bot:
+    build: .
+    container_name: crypto-trading-bot
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./utils/config.yaml:/app/utils/config.yaml
+    environment:
+      - BINANCE_TEST_API_KEY=${BINANCE_TEST_API_KEY}
+      - BINANCE_TEST_SECRET_KEY=${BINANCE_TEST_SECRET_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    restart: unless-stopped 
