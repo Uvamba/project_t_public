@@ -326,24 +326,19 @@ def display_signals(signals):
 def start_trading(client, llm_provider):
     """
     트레이딩 실행 함수
-    
-    Args:
-        client: BinanceClient 인스턴스
-        llm_provider: 사용할 LLM 제공자
     """
     try:
-        # 시장 데이터 가져오기
+        # 1. 시장 데이터 수집
         df = fetch_market_data()
         
-        # 기술적 분석 수행
+        # 2. 기술적 분석 수행
         analysis = TechnicalAnalysis(df)
         analysis_result = analysis.analyze_rsi_macd()
         
-        # 현재 포지션 정보
+        # 3. 현재 포지션 및 기본 지표 표시
         position = client.get_position('BTC/USDT')
-        
-        # 지표 표시
         current_data = df.iloc[-1]
+        
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("현재가", f"${current_data['close']:,.2f}")
@@ -354,15 +349,10 @@ def start_trading(client, llm_provider):
         with col4:
             st.metric("거래량", f"${current_data['volume']:,.2f}")
         
-        # 차트와 시그널 표시
+        # 4. 차트 표시
         display_charts(analysis_result['historical_data'])
         
-        # 기술적 분석 결과 표시
-        st.subheader("📊 기술적 분석 시그널")
-        for signal in analysis_result['signals']:
-            st.info(f"**{signal['indicator']}**: {signal['signal']} ({signal['strength']} 강도) → {'🔵 매수 고려' if signal['action'] == 'consider_buy' else '🔴 매도 고려'}")
-        
-        # 현재 데이터 변환
+        # 5. LLM 분석 수행
         current_data = {
             'price': df['close'].iloc[-1],
             'volume': df['volume'].iloc[-1],
@@ -370,14 +360,27 @@ def start_trading(client, llm_provider):
             'ask': df['close'].iloc[-1] * 1.0001
         }
         
-        # LLM 분석 실행 및 표시
-        st.subheader("🤖 LLM 분석")
         config = load_config()
         llm = GroqInterface(config['groq']['api_key']) if llm_provider == "Groq" else OpenAIInterface(config['openai']['api_key'])
         llm_analysis = llm.analyze_market(current_data, analysis_result)
-        st.write(llm_analysis)
         
-        # 시장 트렌드 표시
+        # 6. 교차 검증 및 매매 결정
+        technical_signal = analysis_result['signals'][0]['action']
+        llm_signal = llm_analysis.get('action', 'hold')
+        
+        # 7. 분석 결과 표시
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("📊 기술적 분석")
+            st.write(f"시그널: {technical_signal}")
+            display_signals(analysis_result['signals'])
+            
+        with col2:
+            st.subheader("🤖 LLM 분석")
+            st.write(f"제안: {llm_signal}")
+            st.write(llm_analysis)
+        
+        # 8. 시장 트렌드 표시
         st.subheader("📈 시장 트렌드")
         st.markdown(
             f"""<div style='padding: 10px; border-radius: 5px; 
@@ -386,7 +389,14 @@ def start_trading(client, llm_provider):
             unsafe_allow_html=True
         )
         
-        # 자동 새로고침
+        # 9. 매매 실행 (시그널이 일치할 경우)
+        if technical_signal == llm_signal and technical_signal != 'hold':
+            st.success(f"매매 시그널 일치: {technical_signal}")
+            # TODO: 실제 매매 실행 로직 구현
+        else:
+            st.info("현재 매매 시그널이 불일치하거나 관망 중입니다.")
+        
+        # 10. 자동 갱신
         time.sleep(config['trading']['interval'])
         st.experimental_rerun()
         

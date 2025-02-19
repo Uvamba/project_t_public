@@ -42,7 +42,8 @@ class BinanceClient:
                 'options': {
                     'defaultType': 'spot',
                     'adjustForTimeDifference': True,
-                    'testnet': True
+                    'testnet': True,
+                    'createMarketBuyOrderRequiresPrice': False
                 },
                 'urls': {
                     'api': {
@@ -64,7 +65,18 @@ class BinanceClient:
                 'enableRateLimit': True
             })
         
-        self.exchange.load_markets()  # 마켓 정보 로드 유지
+        # 기본 마켓 정보만 설정
+        self.exchange.markets = {
+            'BTC/USDT': {
+                'id': 'BTCUSDT',
+                'symbol': 'BTC/USDT',
+                'base': 'BTC',
+                'quote': 'USDT',
+                'precision': {'amount': 8, 'price': 2},
+                'limits': {'amount': {'min': 0.00001}},
+                'type': 'spot'
+            }
+        }
         self.trade_history = []
 
     def get_market_price(self, symbol: str) -> float:
