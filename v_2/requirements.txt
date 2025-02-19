@@ -1,4 +1,4 @@
-ccxt==4.4.58
+ccxt==4.1.87
 openai==0.27.0
 streamlit==1.19.0
 numpy==1.23.5  # numpy 버전 명시

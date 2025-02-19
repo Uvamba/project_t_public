@@ -41,20 +41,12 @@ class BinanceClient:
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
-                    'testnet': True,
-                    'adjustForTimeDifference': True,
-                    'createMarketBuyOrderRequiresPrice': False,
-                    'fetchCurrencies': False,  # /sapi 엔드포인트 사용 방지
-                    'recvWindow': 10000,  # 타임스탬프 유효 기간 확장
-                    'warnOnFetchOHLCVLimitArgument': False,
-                    'fetchMarkets': False  # 마켓 정보 자동 로드 비활성화
+                    'adjustForTimeDifference': True
                 },
                 'urls': {
                     'api': {
-                        'public': 'https://testnet.binance.vision/api',
-                        'private': 'https://testnet.binance.vision/api',
-                        'v3': 'https://testnet.binance.vision/api/v3',
-                        'v1': 'https://testnet.binance.vision/api/v1'
+                        'public': 'https://testnet.binance.vision/api/v3',
+                        'private': 'https://testnet.binance.vision/api/v3'
                     }
                 }
             })
@@ -68,28 +60,23 @@ class BinanceClient:
                 }
             })
         
-        # 테스트넷용 기본 마켓 정보 설정
-        if testnet:
+        # 기본 설정
+        self.exchange.set_sandbox_mode(testnet)
+        
+        try:
+            # 기본 시장 정보만 로드
+            self.exchange.load_markets(reload=False)
+        except Exception as e:
+            # 에러 발생 시 기본 마켓 정보 수동 설정
             self.exchange.markets = {
                 'BTC/USDT': {
                     'id': 'BTCUSDT',
                     'symbol': 'BTC/USDT',
                     'base': 'BTC',
                     'quote': 'USDT',
-                    'baseId': 'BTC',
-                    'quoteId': 'USDT',
-                    'active': True,
-                    'precision': {'amount': 8, 'price': 2},
-                    'limits': {'amount': {'min': 0.00001}},
-                    'info': {},
                     'type': 'spot'
                 }
             }
-            self.exchange.marketsById = {
-                'BTCUSDT': self.exchange.markets['BTC/USDT']
-            }
-        else:
-            self.exchange.load_markets()
         
         self.trade_history = []
 
