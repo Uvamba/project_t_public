@@ -44,7 +44,10 @@ class BinanceClient:
                     'testnet': True,
                     'adjustForTimeDifference': True,
                     'createMarketBuyOrderRequiresPrice': False,
-                    'fetchCurrencies': False  # /sapi 엔드포인트 사용 방지
+                    'fetchCurrencies': False,  # /sapi 엔드포인트 사용 방지
+                    'recvWindow': 10000,  # 타임스탬프 유효 기간 확장
+                    'warnOnFetchOHLCVLimitArgument': False,
+                    'fetchMarkets': False  # 마켓 정보 자동 로드 비활성화
                 },
                 'urls': {
                     'api': {
@@ -52,10 +55,6 @@ class BinanceClient:
                         'private': 'https://testnet.binance.vision/api',
                         'v3': 'https://testnet.binance.vision/api/v3',
                         'v1': 'https://testnet.binance.vision/api/v1'
-                    },
-                    'test': {
-                        'public': 'https://testnet.binance.vision/api',
-                        'private': 'https://testnet.binance.vision/api'
                     }
                 }
             })
@@ -77,13 +76,20 @@ class BinanceClient:
                     'symbol': 'BTC/USDT',
                     'base': 'BTC',
                     'quote': 'USDT',
+                    'baseId': 'BTC',
+                    'quoteId': 'USDT',
+                    'active': True,
                     'precision': {'amount': 8, 'price': 2},
                     'limits': {'amount': {'min': 0.00001}},
+                    'info': {},
                     'type': 'spot'
                 }
             }
+            self.exchange.marketsById = {
+                'BTCUSDT': self.exchange.markets['BTC/USDT']
+            }
         else:
-            self.exchange.load_markets()  # 실거래의 경우만 load_markets() 사용
+            self.exchange.load_markets()
         
         self.trade_history = []
 
