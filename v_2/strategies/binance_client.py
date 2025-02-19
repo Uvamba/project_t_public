@@ -34,14 +34,15 @@ class BinanceClient:
         """
         바이낸스 클라이언트 초기화
         """
-        # 테스트넷 URL 먼저 설정
-        self.urls = {
+        # 테스트넷 URL 설정
+        urls = {
             'api': {
-                'public': 'https://testnet.binancefuture.com/fapi/v1',
-                'private': 'https://testnet.binancefuture.com/fapi/v1',
-                'v1': 'https://testnet.binancefuture.com/fapi/v1',
+                'public': 'https://testnet.binance.vision/api/v3',
+                'private': 'https://testnet.binance.vision/api/v3',
+                'v1': 'https://testnet.binance.vision/api/v1',
+                'v3': 'https://testnet.binance.vision/api/v3',
             }
-        }
+        } if testnet else None
         
         self.exchange = ccxt.binance({
             'apiKey': api_key,
@@ -51,9 +52,7 @@ class BinanceClient:
                 'defaultType': 'spot',
                 'adjustForTimeDifference': True,
                 'testnet': testnet,
-                'urls': {
-                    'api': 'https://testnet.binance.vision/api'
-                } if testnet else None
+                'urls': urls
             }
         })
         
