@@ -1,31 +1,22 @@
-# 트레이딩 봇 설정 파일
-# 각 환경 및 API 설정을 관리
-
-# 바이낸스 API 설정
 binance:
-  # 실거래 환경
   live:
-    api_key: ''    # 실제 API 키
-    secret_key: '' # 실제 시크릿 키
-  
-  # 테스트넷 환경
+    api_key: ''
+    secret_key: ''
   testnet:
-    api_key:     # 테스트넷 API 키
-    secret_key:  # 테스트넷 시크릿 키
-
-# Groq LLM 설정
+    api_key: ''
+    secret_key: ''
 groq:
-  api_key:  # Groq API 키
-  model: mixtral-8x7b-32768  # 사용할 모델
-
-# LLM 공통 설정
+  api_key: ''
+  model: mixtral-8x7b-32768
 llm:
-  max_tokens: 1000    # 최대 토큰 수
-  temperature: 0.7    # 응답 다양성 조절
-
-# 거래 설정
+  max_tokens: 1000
+  temperature: 0.7
+max_tokens: 1000
+openai:
+  api_key: ''
+  model: gpt-4
 trading:
-  interval: 300       # 분석 주기 (초)
-  max_amount: 1.0     # 최대 거래량
-  min_amount: 0.001   # 최소 거래량
-  symbol: BTC/USDT    # 거래 페어
+  interval: 300
+  max_amount: 1.0
+  min_amount: 0.001
+  symbol: BTC/USDT

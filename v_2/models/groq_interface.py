@@ -15,7 +15,7 @@ from datetime import datetime
 import pandas as pd
 
 class GroqInterface:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key):
         """
         Groq API 클라이언트 초기화
         
@@ -28,14 +28,16 @@ class GroqInterface:
         - 모델 파라미터 설정
         """
         self.api_key = api_key
-        self.base_url = "https://api.groq.com/v1/chat/completions"
+        # OpenAI 호환 엔드포인트 사용
+        self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+        # Mixtral 8x7B 모델 사용 (GPT-4 수준의 성능)
         self.model = "mixtral-8x7b-32768"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
-    def analyze_market(self, market_data: dict, analysis_result: dict) -> str:
+    def analyze_market(self, market_data, analysis_result):
         """
         시장 데이터 분석 및 매매 전략 생성
         

@@ -2,21 +2,21 @@
 트레이딩 봇 메인 대시보드
 시스템 설정과 실행 환경을 관리하는 진입점
 
-주요 기능:
-1. 실시간 시장 데이터 시각화
-   - 캔들스틱 차트
-   - RSI, MACD 지표
-   - 거래량 정보
+# 주요 기능:
+- 실행 환경 관리
+  - 테스트넷/실거래 선택
+  - API 선택 (Groq/OpenAI)
+  - 설정 저장/로드
 
-2. 분석 결과 표시
-   - 기술적 분석 시그널
-   - LLM 분석 결과
-   - 시장 트렌드
+- 시스템 상태 표시
+  - 현재 실행 상태
+  - 에러/경고 메시지
+  - 버전 정보
 
-3. 거래 설정 관리
-   - API 키 설정
-   - 거래 환경 선택
-   - 자동 거래 설정
+- 거래 모니터링
+  - 실시간 거래 현황
+  - 포지션 정보
+  - 수익률 분석
 """
 
 import streamlit as st
@@ -213,7 +213,7 @@ def display_openai_trading():
         time.sleep(5)
         st.experimental_rerun()
 
-def display_charts(df: pd.DataFrame):
+def display_charts(df):
     """
     차트 시각화 함수
     
