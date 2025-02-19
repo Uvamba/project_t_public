@@ -364,7 +364,11 @@ def main():
     4. LLM 분석 실행
     5. 결과 표시 및 자동 갱신
     """
+    # 메인 타이틀
     st.title('🤖 암호화폐 트레이딩 봇')
+    
+    # 메인 컨테이너 (결과 표시용)
+    main_container = st.container()
     
     # 사이드바 설정
     with st.sidebar:
@@ -436,9 +440,11 @@ def main():
                     os.environ['OPENAI_API_KEY'] = llm_api_key
                 
                 # 트레이딩 시작 (거래 주기 전달)
-                start_trading(client, llm_provider, trading_interval)
+                with main_container:
+                    start_trading(client, llm_provider, trading_interval)
         else:
-            st.info('👈 API 키를 입력하고 트레이딩을 시작하세요.')
+            with main_container:
+                st.info('👈 API 키를 입력하고 트레이딩을 시작하세요.')
 
 if __name__ == "__main__":
     main() 
