@@ -31,6 +31,10 @@ def load_config() -> Dict[str, Any]:
             'api_key': os.getenv('GROQ_API_KEY', ''),
             'model': os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
         },
+        'openai': {
+            'api_key': os.getenv('OPENAI_API_KEY', ''),
+            'model': os.getenv('OPENAI_MODEL', 'gpt-4')
+        },
         'trading': {
             'interval': int(os.getenv('TRADING_INTERVAL', '300')),
             'max_amount': float(os.getenv('MAX_AMOUNT', '1.0')),

@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from strategies.binance_client import BinanceClient
 from scripts.fetch_data import fetch_market_data
 from models.groq_interface import GroqInterface
+from models.openai_interface import OpenAIInterface
 from strategies.technical_indicators import TechnicalAnalysis
 from utils.config import load_config
 
@@ -322,61 +323,16 @@ def display_signals(signals):
             unsafe_allow_html=True
         )
 
-def main():
+def start_trading(client, llm_provider):
     """
-    메인 대시보드 실행 함수
+    트레이딩 실행 함수
     
-    처리 순서:
-    1. 설정 로드 및 UI 구성
-    2. 시장 데이터 수집
-    3. 기술적 분석 수행
-    4. LLM 분석 실행
-    5. 결과 표시 및 자동 갱신
+    Args:
+        client: BinanceClient 인스턴스
+        llm_provider: 사용할 LLM 제공자
     """
-    st.title('🤖 암호화폐 트레이딩 봇')
-    
-    # 설정 로드
-    config = load_config()
-    
-    # 사이드바 설정
-    with st.sidebar:
-        st.header("⚙️ 설정")
-        
-        # API 선택
-        api_type = st.radio(
-            "API 선택",
-            ["Groq", "OpenAI GPT-4"]
-        )
-        
-        # 실행 환경 선택
-        environment = st.radio(
-            "실행 환경",
-            ["테스트넷", "실거래"]
-        )
-        
-        # 분석 주기 설정
-        st.header("📊 분석 설정")
-        interval = st.slider(
-            "분석 주기 (초)",
-            min_value=5,
-            max_value=300,
-            value=config['trading'].get('interval', 60),
-            step=5,
-            help="데이터 분석과 차트 업데이트 주기"
-        )
-        
-        # 설정 저장 버튼
-        if st.button("설정 저장"):
-            config['trading']['interval'] = interval
-            with open('utils/config.yaml', 'w') as f:
-                yaml.dump(config, f)
-            st.success("설정이 저장되었습니다!")
-    
-    # 세션 상태 저장
-    st.session_state.environment = 'testnet' if environment == "테스트넷" else 'live'
-    
     try:
-        # 시장 데이터 가져오기 (DataFrame으로 받음)
+        # 시장 데이터 가져오기
         df = fetch_market_data()
         
         # 기술적 분석 수행
@@ -384,14 +340,9 @@ def main():
         analysis_result = analysis.analyze_rsi_macd()
         
         # 현재 포지션 정보
-        client = BinanceClient(
-            api_key=config['binance'][st.session_state.environment]['api_key'],
-            secret_key=config['binance'][st.session_state.environment]['secret_key'],
-            testnet=(st.session_state.environment == 'testnet')
-        )
         position = client.get_position('BTC/USDT')
         
-        # 지표 표시 (DataFrame의 마지막 행 사용)
+        # 지표 표시
         current_data = df.iloc[-1]
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -411,18 +362,19 @@ def main():
         for signal in analysis_result['signals']:
             st.info(f"**{signal['indicator']}**: {signal['signal']} ({signal['strength']} 강도) → {'🔵 매수 고려' if signal['action'] == 'consider_buy' else '🔴 매도 고려'}")
         
-        # DataFrame을 dictionary 형태로 변환
+        # 현재 데이터 변환
         current_data = {
             'price': df['close'].iloc[-1],
             'volume': df['volume'].iloc[-1],
-            'bid': df['close'].iloc[-1] * 0.9999,  # 예시값
-            'ask': df['close'].iloc[-1] * 1.0001   # 예시값
+            'bid': df['close'].iloc[-1] * 0.9999,
+            'ask': df['close'].iloc[-1] * 1.0001
         }
         
         # LLM 분석 실행 및 표시
         st.subheader("🤖 LLM 분석")
-        groq = GroqInterface(config['groq']['api_key'])
-        llm_analysis = groq.analyze_market(current_data, analysis_result)
+        config = load_config()
+        llm = GroqInterface(config['groq']['api_key']) if llm_provider == "Groq" else OpenAIInterface(config['openai']['api_key'])
+        llm_analysis = llm.analyze_market(current_data, analysis_result)
         st.write(llm_analysis)
         
         # 시장 트렌드 표시
@@ -434,14 +386,63 @@ def main():
             unsafe_allow_html=True
         )
         
-        # 자동 새로고침 (interval 사용)
-        time.sleep(interval)  # config['trading']['interval'] 대신 UI에서 설정한 값 사용
+        # 자동 새로고침
+        time.sleep(config['trading']['interval'])
         st.experimental_rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
         st.experimental_rerun()
+
+def main():
+    """
+    메인 대시보드 실행 함수
+    
+    처리 순서:
+    1. 설정 로드 및 UI 구성
+    2. 시장 데이터 수집
+    3. 기술적 분석 수행
+    4. LLM 분석 실행
+    5. 결과 표시 및 자동 갱신
+    """
+    st.title('🤖 암호화폐 트레이딩 봇')
+    
+    # 사이드바 설정
+    st.sidebar.header('⚙️ 실행 환경 설정')
+    
+    # 환경 선택
+    environment = st.sidebar.radio(
+        "거래 환경 선택",
+        ["테스트넷", "실거래"],
+        index=0  # 기본값은 테스트넷
+    )
+    
+    # API 선택
+    llm_provider = st.sidebar.radio(
+        "LLM 선택",
+        ["Groq", "OpenAI GPT-4"],
+        index=0
+    )
+    
+    # 실행 버튼
+    if st.sidebar.button('트레이딩 시작'):
+        # 환경변수 설정
+        os.environ['TRADING_ENVIRONMENT'] = 'testnet' if environment == "테스트넷" else 'live'
+        os.environ['LLM_PROVIDER'] = llm_provider.lower()
+        
+        # 설정에 따른 클라이언트 초기화
+        config = load_config()
+        client = BinanceClient(
+            api_key=config['binance']['testnet' if environment == "테스트넷" else 'live']['api_key'],
+            secret_key=config['binance']['testnet' if environment == "테스트넷" else 'live']['secret_key'],
+            testnet=(environment == "테스트넷")
+        )
+        
+        # 트레이딩 시작
+        start_trading(client, llm_provider)
+    else:
+        st.info('👈 사이드바에서 실행 환경을 설정하고 트레이딩을 시작하세요.')
 
 if __name__ == "__main__":
     main() 
