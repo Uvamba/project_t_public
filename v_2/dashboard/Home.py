@@ -147,12 +147,12 @@ def display_groq_trading():
             
         # 자동 새로고침
         time.sleep(interval)
-        st.rerun()
+        st.experimental_rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.rerun()
+        st.experimental_rerun()
 
 def display_openai_trading():
     """OpenAI 트레이딩 화면 표시"""
@@ -203,12 +203,12 @@ def display_openai_trading():
             
         # 자동 새로고침
         time.sleep(interval)
-        st.rerun()
+        st.experimental_rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.rerun()
+        st.experimental_rerun()
 
 def display_charts(df):
     """
@@ -369,9 +369,18 @@ def start_trading(client, llm_provider, trading_interval):
         llm = GroqInterface(config['groq']['api_key']) if llm_provider == "Groq" else OpenAIInterface(config['openai']['api_key'])
         llm_analysis = llm.analyze_market(current_data, analysis_result)
         
+        # LLM 분석 결과 처리 수정
+        if isinstance(llm_analysis, str):
+            # 문자열인 경우 기본값 설정
+            llm_signal = 'hold'
+            llm_analysis_text = llm_analysis
+        else:
+            # 딕셔너리인 경우
+            llm_signal = llm_analysis.get('action', 'hold')
+            llm_analysis_text = str(llm_analysis)
+        
         # 6. 교차 검증 및 매매 결정
         technical_signal = analysis_result['signals'][0]['action']
-        llm_signal = llm_analysis.get('action', 'hold')
         
         # 7. 분석 결과 표시
         col1, col2 = st.columns(2)
@@ -383,7 +392,7 @@ def start_trading(client, llm_provider, trading_interval):
         with col2:
             st.subheader("🤖 LLM 분석")
             st.write(f"제안: {llm_signal}")
-            st.write(llm_analysis)
+            st.write(llm_analysis_text)
         
         # 8. 시장 트렌드 표시
         st.subheader("📈 시장 트렌드")
@@ -401,14 +410,14 @@ def start_trading(client, llm_provider, trading_interval):
         else:
             st.info("현재 매매 시그널이 불일치하거나 관망 중입니다.")
         
-        # 자동 갱신 (거래 주기 사용)
+        # 자동 갱신 (experimental_rerun 사용)
         time.sleep(trading_interval)
-        st.rerun()
+        st.experimental_rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.rerun()
+        st.experimental_rerun()
 
 def main():
     """
