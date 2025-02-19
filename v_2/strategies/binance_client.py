@@ -40,21 +40,20 @@ class BinanceClient:
                 'secret': secret_key,
                 'enableRateLimit': True,
                 'options': {
-                    'defaultType': 'spot',
+                    'defaultType': 'future',
                     'adjustForTimeDifference': True,
                     'testnet': True,
                     'createMarketBuyOrderRequiresPrice': False
                 },
                 'urls': {
                     'api': {
-                        'public': 'https://testnet.binance.vision/api',
-                        'private': 'https://testnet.binance.vision/api',
-                        'v3': 'https://testnet.binance.vision/api/v3',
-                        'v1': 'https://testnet.binance.vision/api/v1'
+                        'public': 'https://testnet.binancefuture.com/fapi/v1',
+                        'private': 'https://testnet.binancefuture.com/fapi/v1',
+                        'v1': 'https://testnet.binancefuture.com/fapi/v1'
                     },
                     'test': {
-                        'public': 'https://testnet.binance.vision/api',
-                        'private': 'https://testnet.binance.vision/api'
+                        'public': 'https://testnet.binancefuture.com/fapi/v1',
+                        'private': 'https://testnet.binancefuture.com/fapi/v1'
                     }
                 }
             })
@@ -62,7 +61,10 @@ class BinanceClient:
             self.exchange = ccxt.binance({
                 'apiKey': api_key,
                 'secret': secret_key,
-                'enableRateLimit': True
+                'enableRateLimit': True,
+                'options': {
+                    'defaultType': 'future'
+                }
             })
         
         # 기본 마켓 정보만 설정
@@ -74,7 +76,7 @@ class BinanceClient:
                 'quote': 'USDT',
                 'precision': {'amount': 8, 'price': 2},
                 'limits': {'amount': {'min': 0.00001}},
-                'type': 'spot'
+                'type': 'future'
             }
         }
         self.trade_history = []

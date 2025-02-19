@@ -147,12 +147,12 @@ def display_groq_trading():
             
         # 자동 새로고침
         time.sleep(interval)
-        st.experimental_rerun()
+        st.rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.experimental_rerun()
+        st.rerun()
 
 def display_openai_trading():
     """OpenAI 트레이딩 화면 표시"""
@@ -203,12 +203,12 @@ def display_openai_trading():
             
         # 자동 새로고침
         time.sleep(interval)
-        st.experimental_rerun()
+        st.rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.experimental_rerun()
+        st.rerun()
 
 def display_charts(df):
     """
@@ -398,12 +398,12 @@ def start_trading(client, llm_provider):
         
         # 10. 자동 갱신
         time.sleep(config['trading']['interval'])
-        st.experimental_rerun()
+        st.rerun()
         
     except Exception as e:
         st.error(f"에러 발생: {e}")
         time.sleep(5)
-        st.experimental_rerun()
+        st.rerun()
 
 def main():
     """
