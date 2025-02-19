@@ -409,40 +409,67 @@ def main():
     st.title('🤖 암호화폐 트레이딩 봇')
     
     # 사이드바 설정
-    st.sidebar.header('⚙️ 실행 환경 설정')
-    
-    # 환경 선택
-    environment = st.sidebar.radio(
-        "거래 환경 선택",
-        ["테스트넷", "실거래"],
-        index=0  # 기본값은 테스트넷
-    )
-    
-    # API 선택
-    llm_provider = st.sidebar.radio(
-        "LLM 선택",
-        ["Groq", "OpenAI GPT-4"],
-        index=0
-    )
-    
-    # 실행 버튼
-    if st.sidebar.button('트레이딩 시작'):
-        # 환경변수 설정
-        os.environ['TRADING_ENVIRONMENT'] = 'testnet' if environment == "테스트넷" else 'live'
-        os.environ['LLM_PROVIDER'] = llm_provider.lower()
+    with st.sidebar:
+        st.header("⚙️ 실행 환경 설정")
         
-        # 설정에 따른 클라이언트 초기화
-        config = load_config()
-        client = BinanceClient(
-            api_key=config['binance']['testnet' if environment == "테스트넷" else 'live']['api_key'],
-            secret_key=config['binance']['testnet' if environment == "테스트넷" else 'live']['secret_key'],
-            testnet=(environment == "테스트넷")
+        # 환경 선택
+        environment = st.radio(
+            "거래 환경 선택",
+            ["테스트넷", "실거래"],
+            index=0  # 기본값은 테스트넷
         )
         
-        # 트레이딩 시작
-        start_trading(client, llm_provider)
-    else:
-        st.info('👈 사이드바에서 실행 환경을 설정하고 트레이딩을 시작하세요.')
+        # API 선택
+        llm_provider = st.radio(
+            "LLM 선택",
+            ["Groq", "OpenAI GPT-4"],
+            index=0
+        )
+        
+        # API 키 입력
+        st.header("🔑 API 키 설정")
+        
+        # Binance API 키
+        binance_api_key = st.text_input(
+            "Binance API Key",
+            type="password",
+            help="Binance API 키를 입력하세요"
+        )
+        binance_secret_key = st.text_input(
+            "Binance Secret Key",
+            type="password",
+            help="Binance Secret 키를 입력하세요"
+        )
+        
+        # LLM API 키
+        llm_api_key = st.text_input(
+            f"{llm_provider} API Key",
+            type="password",
+            help=f"{llm_provider} API 키를 입력하세요"
+        )
+        
+        # 실행 버튼
+        if st.button('트레이딩 시작'):
+            if not (binance_api_key and binance_secret_key and llm_api_key):
+                st.error("모든 API 키를 입력해주세요!")
+            else:
+                # 클라이언트 초기화
+                client = BinanceClient(
+                    api_key=binance_api_key,
+                    secret_key=binance_secret_key,
+                    testnet=(environment == "테스트넷")
+                )
+                
+                # 환경변수 설정
+                if llm_provider == "Groq":
+                    os.environ['GROQ_API_KEY'] = llm_api_key
+                else:
+                    os.environ['OPENAI_API_KEY'] = llm_api_key
+                
+                # 트레이딩 시작
+                start_trading(client, llm_provider)
+        else:
+            st.info('👈 API 키를 입력하고 트레이딩을 시작하세요.')
 
 if __name__ == "__main__":
     main() 
