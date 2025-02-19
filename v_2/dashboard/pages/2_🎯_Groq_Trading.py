@@ -25,6 +25,7 @@ sys.path.append(project_root)
 from models.groq_interface import GroqInterface
 from scripts.fetch_data import fetch_market_data
 from strategies.binance_client import BinanceClient
+from strategies.technical_indicators import TechnicalAnalysis
 
 def load_config():
     """설정 파일 로드"""
@@ -35,6 +36,36 @@ def save_config(config):
     """설정 파일 저장"""
     with open('utils/config.yaml', 'w') as file:
         yaml.dump(config, file)
+
+def display_charts(df):
+    # 캔들스틱 차트
+    candlestick = go.Figure(data=[
+        go.Candlestick(
+            x=df.index,
+            open=df['open'],
+            high=df['high'],
+            low=df['low'],
+            close=df['close'],
+            name='OHLC'
+        )
+    ])
+    candlestick.update_layout(title="BTC/USDT 가격 차트", height=400)
+    
+    # RSI 차트
+    rsi = go.Figure()
+    rsi.add_trace(go.Scatter(x=df.index, y=df['RSI'], name='RSI'))
+    rsi.add_hline(y=70, line_dash="dash", line_color="red")
+    rsi.add_hline(y=30, line_dash="dash", line_color="green")
+    rsi.update_layout(title="RSI (14)", height=200)
+    
+    # MACD 차트
+    macd = go.Figure()
+    macd.add_trace(go.Scatter(x=df.index, y=df['MACD'], name='MACD'))
+    macd.add_trace(go.Scatter(x=df.index, y=df['MACD_Signal'], name='Signal'))
+    macd.add_bar(x=df.index, y=df['MACD_Hist'], name='Histogram')
+    macd.update_layout(title="MACD", height=200)
+    
+    return candlestick, rsi, macd
 
 def main():
     """
@@ -166,58 +197,15 @@ def main():
                 value=f"${market_data['volume']:,.2f}"
             )
         
-        # Groq 분석 결과
-        st.subheader("🤖 LLaMA 2 분석")
-        st.text_area(
-            "분석 결과",
-            analysis,
-            height=150
-        )
+        # 차트 표시
+        candlestick, rsi, macd = display_charts(analysis['chart_data'])
+        st.plotly_chart(candlestick, use_container_width=True)
+        st.plotly_chart(rsi, use_container_width=True)
+        st.plotly_chart(macd, use_container_width=True)
         
-        # 차트 섹션
-        st.subheader("📈 시장 데이터")
-        
-        # OHLCV 데이터 가져오기
-        ohlcv = client.get_ohlcv('BTC/USDT', '1h', 100)
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        
-        # 캔들스틱 차트
-        fig = go.Figure(data=[
-            go.Candlestick(
-                x=df['timestamp'],
-                open=df['open'],
-                high=df['high'],
-                low=df['low'],
-                close=df['close'],
-                name='OHLC'
-            )
-        ])
-        
-        fig.update_layout(
-            title="BTC/USDT 가격 차트",
-            yaxis_title="가격 (USDT)",
-            xaxis_title="시간",
-            height=600
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # 거래량 차트
-        volume_fig = go.Figure(data=[
-            go.Bar(
-                x=df['timestamp'],
-                y=df['volume'],
-                name='거래량'
-            )
-        ])
-        
-        volume_fig.update_layout(
-            title="거래량",
-            height=200
-        )
-        
-        st.plotly_chart(volume_fig, use_container_width=True)
+        # LLM 분석 결과 표시
+        st.subheader("🤖 Groq 분석")
+        st.write(analysis['llm_analysis'])
         
         # 거래 통계
         st.subheader("📊 거래 통계")

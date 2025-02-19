@@ -1,43 +1,66 @@
 """
 LLM 기반 거래 전략 클래스
-LLM의 분석을 실제 거래 신호로 변환하고 실행
+기술적 분석과 LLM의 분석을 결합하여 최종 매매 결정
 
-# 주요 기능:
-- LLM 분석 요청
-  - 시장 데이터 전처리
-  - 프롬프트 생성
-  - 응답 처리
-
-- 거래 신호 생성
-  - 텍스트 분석
-  - 매매 시그널 추출
-  - 거래량 결정
-
-- 리스크 관리
-  - 포지션 크기 제한
-  - 손실 제한
-  - 수익 실현
+주요 기능:
+1. 시장 데이터 분석
+2. 매매 신호 검증
+3. 거래 실행 결정
+4. 리스크 관리
 """
-from models.llm_interface import LLMInterface
+from models.llm_interface import LLMAnalyzer
 from models.strategy_generator import StrategyGenerator
+from .technical_indicators import TechnicalAnalysis
 
 class LLMStrategy:
-    def __init__(self, api_key, client):
+    def __init__(self, api_key: str, client, llm_provider: str = "groq"):
         """
-        LLM 기반 전략 초기화
+        LLM 전략 초기화
         
         Args:
-            api_key (str): LLM API 키
-            client: 바이낸스 클라이언트 인스턴스
-            
-        Features:
-            - LLM 인터페이스 초기화
-            - 전략 생성기 설정
-            - 거래 클라이언트 연결
+            api_key: LLM API 키
+            client: 거래소 클라이언트
+            llm_provider: 사용할 LLM 제공자
         """
-        self.llm = LLMInterface(api_key)
+        self.api_key = api_key
+        self.analyzer = LLMAnalyzer(api_key, provider=llm_provider)
         self.generator = StrategyGenerator()
         self.client = client
+        self.technical_analysis = None
+
+    def analyze_market(self, market_data):
+        """
+        시장 데이터 종합 분석
+        
+        Args:
+            market_data (pd.DataFrame): OHLCV 데이터
+            
+        Returns:
+            Dict: {
+                'llm_analysis': str,      # LLM 분석 결과
+                'technical_analysis': Dict,  # 기술적 분석 결과
+                'chart_data': pd.DataFrame  # 차트 데이터
+            }
+        """
+        # 기술적 분석 수행
+        self.technical_analysis = TechnicalAnalysis(market_data)
+        analysis_result = self.technical_analysis.analyze_rsi_macd()
+        
+        # LLM 분석 요청
+        prompt = self.analyzer.generate_analysis_prompt(
+            market_data=market_data,
+            analysis_result=analysis_result
+        )
+        
+        # LLM 응답 처리
+        analysis = self.analyzer.get_analysis(prompt)
+        
+        # 분석 결과와 차트 데이터 함께 반환
+        return {
+            'llm_analysis': analysis,
+            'technical_analysis': analysis_result,
+            'chart_data': analysis_result['historical_data']
+        }
 
     def execute(self, market_data):
         """
@@ -57,11 +80,16 @@ class LLMStrategy:
         Returns:
             dict: 실행된 주문 정보 또는 None
         """
-        # LLM에게 전략 요청
-        llm_output = self.llm.generate_strategy(market_data)
+        # 시장 분석 수행
+        analysis_result = self.analyze_market(market_data)
         
-        # 전략을 실행 가능한 형태로 변환
-        strategy = self.generator.parse_strategy(llm_output)
+        # 전략 생성
+        strategy = self.generator.parse_strategy(analysis_result['llm_analysis'])
+        
+        # 기술적 시그널과 LLM 분석이 일치하는지 검증
+        if not self._validate_signals(strategy, analysis_result['technical_analysis']):
+            print("기술적 시그널과 LLM 분석이 일치하지 않아 매매 보류")
+            return None
 
         # 매매 신호에 따른 주문 실행
         if strategy["action"] == "buy":
@@ -70,4 +98,22 @@ class LLMStrategy:
         elif strategy["action"] == "sell":
             print(f"매도 실행: {strategy['amount']} BTC")
             return self.client.place_order('BTC/USDT', 'sell', strategy['amount'])
-        return None 
+        return None
+
+    def _validate_signals(self, strategy, technical_signals):
+        """
+        LLM 전략과 기술적 시그널의 일치성 검증
+        """
+        # 기술적 시그널이 없으면 LLM 판단만으로 진행
+        if not technical_signals['signals']:
+            return True
+            
+        # 매수 시그널 검증
+        if strategy['action'] == 'buy':
+            return any(s['action'] == 'consider_buy' for s in technical_signals['signals'])
+            
+        # 매도 시그널 검증
+        if strategy['action'] == 'sell':
+            return any(s['action'] == 'consider_sell' for s in technical_signals['signals'])
+            
+        return False 

@@ -48,63 +48,32 @@ def ensure_data_dir():
 
 def fetch_market_data():
     """
-    실시간 시장 데이터 수집
+    바이낸스로부터 시장 데이터 수집
     
     Returns:
-        dict: {
-            "timestamp": 현재시각,
-            "price": 현재가,
-            "bid": 매수호가,
-            "ask": 매도호가,
-            "volume": 거래량
+        pd.DataFrame: {
+            'timestamp': datetime,  # 시간
+            'open': float,         # 시가
+            'high': float,         # 고가
+            'low': float,          # 저가
+            'close': float,        # 종가
+            'volume': float        # 거래량
         }
     """
-    # 데이터 디렉토리 확인
-    ensure_data_dir()
+    # 바이낸스 API로부터 데이터 가져오기
+    client = ccxt.binance()
     
-    config = load_config()
-    environment = st.session_state.environment
+    # OHLCV 데이터 가져오기 (1시간 봉)
+    ohlcv = client.fetch_ohlcv('BTC/USDT', '1h', limit=100)
     
-    # 바이낸스 클라이언트 설정
-    if environment == 'testnet':
-        exchange = ccxt.binance({
-            'apiKey': config['binance'][environment]['api_key'],
-            'secret': config['binance'][environment]['secret_key'],
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future',
-                'adjustForTimeDifference': True,
-                'testnet': True,
-                'url': 'https://testnet.binancefuture.com'
-            }
-        })
-    else:
-        exchange = ccxt.binance({
-            'apiKey': config['binance'][environment]['api_key'],
-            'secret': config['binance'][environment]['secret_key'],
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future',
-                'adjustForTimeDifference': True
-            }
-        })
+    # DataFrame 생성
+    df = pd.DataFrame(
+        ohlcv,
+        columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+    )
     
-    # 시장 데이터 수집
-    symbol = 'BTC/USDT'
-    ticker = exchange.fetch_ticker(symbol)
-    order_book = exchange.fetch_order_book(symbol)
+    # 타임스탬프를 datetime으로 변환
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df.set_index('timestamp', inplace=True)
     
-    # 데이터 구조화
-    data = {
-        "timestamp": datetime.now(),
-        "price": ticker['last'],
-        "bid": order_book['bids'][0][0] if order_book['bids'] else None,
-        "ask": order_book['asks'][0][0] if order_book['asks'] else None,
-        "volume": ticker['quoteVolume']
-    }
-    
-    # CSV 파일에 저장
-    df = pd.DataFrame([data])
-    df.to_csv('data/live_data.csv', mode='a', header=False, index=False)
-    
-    return data 
+    return df 

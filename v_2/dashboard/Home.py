@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from strategies.binance_client import BinanceClient
 from scripts.fetch_data import fetch_market_data
 from models.groq_interface import GroqInterface
+from strategies.technical_indicators import TechnicalAnalysis
 
 def load_config():
     """설정 파일 로드"""
@@ -212,133 +213,239 @@ def display_openai_trading():
         time.sleep(5)
         st.experimental_rerun()
 
+def display_charts(df):
+    """
+    차트 시각화 함수
+    
+    Args:
+        df (pd.DataFrame): OHLCV 데이터와 기술적 지표가 포함된 DataFrame
+        
+    표시되는 차트:
+    1. BTC/USDT 캔들스틱
+    2. RSI (14) - 과매수/과매도 기준선 포함
+    3. MACD - 시그널선과 히스토그램
+    """
+    # 캔들스틱 차트
+    candlestick = go.Figure(data=[
+        go.Candlestick(
+            x=df.index,
+            open=df['open'],
+            high=df['high'],
+            low=df['low'],
+            close=df['close'],
+            name='OHLC'
+        )
+    ])
+    st.plotly_chart(candlestick, use_container_width=True)
+    
+    # RSI와 MACD 차트를 나란히 표시
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        rsi = go.Figure()
+        rsi.add_trace(go.Scatter(
+            x=df.index,
+            y=df['RSI'], 
+            name='RSI',
+            line=dict(color='#2962FF', width=2)
+        ))
+        rsi.add_hline(
+            y=70, 
+            line_dash="dash", 
+            line_color="red",
+            annotation_text="과매수",
+            annotation_position="right"
+        )
+        rsi.add_hline(
+            y=30, 
+            line_dash="dash", 
+            line_color="green",
+            annotation_text="과매도",
+            annotation_position="right"
+        )
+        rsi.update_layout(
+            title="RSI (14)",
+            height=250,
+            xaxis_title="시간",
+            yaxis_title="RSI",
+            plot_bgcolor='white',
+            yaxis=dict(gridcolor='lightgrey')
+        )
+        st.plotly_chart(rsi, use_container_width=True)
+    
+    with col2:
+        macd = go.Figure()
+        macd.add_trace(go.Scatter(
+            x=df.index,
+            y=df['MACD'], 
+            name='MACD',
+            line=dict(color='#2962FF', width=2)
+        ))
+        macd.add_trace(go.Scatter(
+            x=df.index,
+            y=df['MACD_Signal'], 
+            name='Signal',
+            line=dict(color='#FF6D00', width=2)
+        ))
+        macd.add_bar(
+            x=df.index,
+            y=df['MACD_Hist'], 
+            name='Histogram',
+            marker_color=['red' if x < 0 else 'green' for x in df['MACD_Hist']]
+        )
+        macd.update_layout(
+            title="MACD",
+            height=250,
+            xaxis_title="시간",
+            yaxis_title="MACD",
+            plot_bgcolor='white',
+            yaxis=dict(gridcolor='lightgrey')
+        )
+        st.plotly_chart(macd, use_container_width=True)
+
+def display_signals(signals):
+    st.subheader("📊 기술적 분석 시그널")
+    
+    for signal in signals:
+        color = (
+            "success" if signal['action'] == 'consider_buy'
+            else "error" if signal['action'] == 'consider_sell'
+            else "info"
+        )
+        
+        message = (
+            f"**{signal['indicator']}**: {signal['signal']} "
+            f"({signal['strength']} 강도) → "
+            f"{'🔵 매수 고려' if signal['action'] == 'consider_buy' else '🔴 매도 고려'}"
+        )
+        
+        st.markdown(
+            f"""<div style='padding: 10px; border-radius: 5px; 
+            background-color: {"#E8F5E9" if color == "success" else "#FFEBEE" if color == "error" else "#E3F2FD"}'>
+            {message}</div>""",
+            unsafe_allow_html=True
+        )
+
 def main():
+    """
+    메인 대시보드 실행 함수
+    
+    처리 순서:
+    1. 설정 로드 및 UI 구성
+    2. 시장 데이터 수집
+    3. 기술적 분석 수행
+    4. LLM 분석 실행
+    5. 결과 표시 및 자동 갱신
+    """
     st.title('🤖 암호화폐 트레이딩 봇')
     
-    # 세션 상태 초기화
-    if 'environment' not in st.session_state:
-        st.session_state.environment = None
-    if 'api_choice' not in st.session_state:
-        st.session_state.api_choice = None
-    
-    st.markdown("""
-    ## 시스템 개요
-    이 트레이딩 봇은 LLM을 활용하여 암호화폐 시장을 분석하고 매매 전략을 생성합니다.
-    """)
+    # 설정 로드
+    config = load_config()
     
     # 사이드바 설정
-    st.sidebar.header("⚙️ 실행 설정")
-    
-    # 실행 환경 선택
-    st.sidebar.subheader("1️⃣ 실행 환경")
-    env_col1, env_col2 = st.sidebar.columns(2)
-    
-    with env_col1:
-        testnet = st.checkbox("테스트넷", 
-                            key="testnet",
-                            help="테스트넷에서 실험")
-    
-    with env_col2:
-        livenet = st.checkbox("실제 거래", 
-                            key="livenet",
-                            help="실제 자금으로 거래")
-    
-    # API 선택
-    st.sidebar.subheader("2️⃣ API 선택")
-    api_col1, api_col2 = st.sidebar.columns(2)
-    
-    with api_col1:
-        groq = st.checkbox("Groq API", 
-                          key="groq",
-                          help="Mixtral-8x7B 모델 사용")
-    
-    with api_col2:
-        openai = st.checkbox("OpenAI API", 
-                           key="openai",
-                           help="GPT-4 모델 사용")
-    
-    # 환경 검증
-    env_selected = sum([testnet, livenet])
-    if env_selected > 1:
-        st.sidebar.error("❌ 실행 환경은 하나만 선택해주세요!")
-        return
-    
-    # API 검증
-    api_selected = sum([groq, openai])
-    if api_selected > 1:
-        st.sidebar.error("❌ API는 하나만 선택해주세요!")
-        return
+    with st.sidebar:
+        st.header("⚙️ 설정")
         
-    # 실행 버튼
-    if st.sidebar.button("▶️ 실행", use_container_width=True):
-        if env_selected == 0:
-            st.sidebar.error("❌ 실행 환경을 선택해주세요!")
-            return
-            
-        if api_selected == 0:
-            st.sidebar.error("❌ API를 선택해주세요!")
-            return
-            
-        # 환경 설정
-        st.session_state.environment = "testnet" if testnet else "live"
+        # API 선택
+        api_type = st.radio(
+            "API 선택",
+            ["Groq", "OpenAI GPT-4"]
+        )
         
-        # API 설정
-        st.session_state.api_choice = "groq" if groq else "openai"
+        # 실행 환경 선택
+        environment = st.radio(
+            "실행 환경",
+            ["테스트넷", "실거래"]
+        )
         
-        # 설정 확인
-        config = load_config()
+        # 분석 주기 설정
+        st.header("📊 분석 설정")
+        interval = st.slider(
+            "분석 주기 (초)",
+            min_value=5,
+            max_value=300,
+            value=config['trading'].get('interval', 60),
+            step=5,
+            help="데이터 분석과 차트 업데이트 주기"
+        )
         
-        # API 키 확인
-        if st.session_state.api_choice == "groq":
-            if not config['groq']['api_key']:
-                st.sidebar.error("❌ Groq API 키가 설정되지 않았습니다!")
-                return
-        else:
-            if not config['openai']['api_key']:
-                st.sidebar.error("❌ OpenAI API 키가 설정되지 않았습니다!")
-                return
-                
-        # 바이낸스 API 키 확인
-        if not config['binance'][st.session_state.environment]['api_key']:
-            st.sidebar.error(f"❌ {st.session_state.environment} 환경의 바이낸스 API 키가 설정되지 않았습니다!")
-            return
-            
-        # 실행 정보 표시
-        st.success(f"""
-        ✅ 트레이딩 봇이 다음 설정으로 실행됩니다:
-        - 실행 환경: {'테스트넷' if testnet else '실제 거래'}
-        - 사용 API: {'Groq' if groq else 'OpenAI'}
-        """)
+        # 설정 저장 버튼
+        if st.button("설정 저장"):
+            config['trading']['interval'] = interval
+            with open('utils/config.yaml', 'w') as f:
+                yaml.dump(config, f)
+            st.success("설정이 저장되었습니다!")
+    
+    # 세션 상태 저장
+    st.session_state.environment = 'testnet' if environment == "테스트넷" else 'live'
+    
+    try:
+        # 시장 데이터 가져오기 (DataFrame으로 받음)
+        df = fetch_market_data()
         
-        # 페이지 선택 저장
-        if groq:
-            st.session_state.page = 'groq'
-        else:
-            st.session_state.page = 'openai'
+        # 기술적 분석 수행
+        analysis = TechnicalAnalysis(df)
+        analysis_result = analysis.analyze_rsi_macd()
         
-        # 새로고침
+        # 현재 포지션 정보
+        client = BinanceClient(
+            api_key=config['binance'][st.session_state.environment]['api_key'],
+            secret_key=config['binance'][st.session_state.environment]['secret_key'],
+            testnet=(st.session_state.environment == 'testnet')
+        )
+        position = client.get_position('BTC/USDT')
+        
+        # 지표 표시 (DataFrame의 마지막 행 사용)
+        current_data = df.iloc[-1]
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("현재가", f"${current_data['close']:,.2f}")
+        with col2:
+            st.metric("BTC 보유량", f"{position['base']['total']:.3f} BTC")
+        with col3:
+            st.metric("USDT 잔고", f"${position['quote']['free']:,.2f}")
+        with col4:
+            st.metric("거래량", f"${current_data['volume']:,.2f}")
+        
+        # 차트와 시그널 표시
+        display_charts(analysis_result['historical_data'])
+        
+        # 기술적 분석 결과 표시
+        st.subheader("📊 기술적 분석 시그널")
+        for signal in analysis_result['signals']:
+            st.info(f"**{signal['indicator']}**: {signal['signal']} ({signal['strength']} 강도) → {'🔵 매수 고려' if signal['action'] == 'consider_buy' else '🔴 매도 고려'}")
+        
+        # DataFrame을 dictionary 형태로 변환
+        current_data = {
+            'price': df['close'].iloc[-1],
+            'volume': df['volume'].iloc[-1],
+            'bid': df['close'].iloc[-1] * 0.9999,  # 예시값
+            'ask': df['close'].iloc[-1] * 1.0001   # 예시값
+        }
+        
+        # LLM 분석 실행 및 표시
+        st.subheader("🤖 LLM 분석")
+        groq = GroqInterface(config['groq']['api_key'])
+        llm_analysis = groq.analyze_market(current_data, analysis_result)
+        st.write(llm_analysis)
+        
+        # 시장 트렌드 표시
+        st.subheader("📈 시장 트렌드")
+        st.markdown(
+            f"""<div style='padding: 10px; border-radius: 5px; 
+            background-color: #F5F5F5'>
+            {analysis_result['trend']['description'].upper()}</div>""",
+            unsafe_allow_html=True
+        )
+        
+        # 자동 새로고침 (interval 사용)
+        time.sleep(interval)  # config['trading']['interval'] 대신 UI에서 설정한 값 사용
         st.experimental_rerun()
-
-    # 시스템 상태
-    st.sidebar.header('시스템 상태')
-    st.sidebar.success('✅ 정상 작동 중')
-    
-    # 기본 정보
-    st.sidebar.info("""
-    현재 버전: v2.0
-    최근 업데이트: 2025.02
-    """)
-
-    # 페이지 표시
-    if 'page' in st.session_state:
-        if st.session_state.page == 'groq':
-            st.title('🤖 Groq 트레이딩')
-            # Groq 트레이딩 관련 컴포넌트 표시
-            display_groq_trading()
-        else:
-            st.title('🤖 OpenAI 트레이딩')
-            # OpenAI 트레이딩 관련 컴포넌트 표시
-            display_openai_trading()
+        
+    except Exception as e:
+        st.error(f"에러 발생: {e}")
+        time.sleep(5)
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main() 
