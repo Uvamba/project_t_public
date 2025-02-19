@@ -41,20 +41,20 @@ class BinanceClient:
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
-                    'adjustForTimeDifference': True,
                     'testnet': True,
+                    'adjustForTimeDifference': True,
                     'createMarketBuyOrderRequiresPrice': False
                 },
                 'urls': {
                     'api': {
-                        'public': 'https://testnet.binance.vision/api/v3',
-                        'private': 'https://testnet.binance.vision/api/v3',
+                        'public': 'https://testnet.binance.vision/api',
+                        'private': 'https://testnet.binance.vision/api',
                         'v3': 'https://testnet.binance.vision/api/v3',
                         'v1': 'https://testnet.binance.vision/api/v1'
                     },
                     'test': {
-                        'public': 'https://testnet.binance.vision/api/v3',
-                        'private': 'https://testnet.binance.vision/api/v3'
+                        'public': 'https://testnet.binance.vision/api',
+                        'private': 'https://testnet.binance.vision/api'
                     }
                 }
             })
@@ -68,18 +68,8 @@ class BinanceClient:
                 }
             })
         
-        # 기본 마켓 정보만 설정
-        self.exchange.markets = {
-            'BTC/USDT': {
-                'id': 'BTCUSDT',
-                'symbol': 'BTC/USDT',
-                'base': 'BTC',
-                'quote': 'USDT',
-                'precision': {'amount': 8, 'price': 2},
-                'limits': {'amount': {'min': 0.00001}},
-                'type': 'spot'
-            }
-        }
+        # 마켓 정보 자동 로드
+        self.exchange.load_markets()
         self.trade_history = []
 
     def get_market_price(self, symbol: str) -> float:
