@@ -34,30 +34,38 @@ class BinanceClient:
         """
         바이낸스 클라이언트 초기화
         """
-        # 테스트넷 URL 설정
-        urls = {
-            'api': {
-                'public': 'https://testnet.binance.vision/api/v3',
-                'private': 'https://testnet.binance.vision/api/v3',
-                'v1': 'https://testnet.binance.vision/api/v1',
-                'v3': 'https://testnet.binance.vision/api/v3',
-            }
-        } if testnet else None
+        if testnet:
+            self.exchange = ccxt.binance({
+                'apiKey': api_key,
+                'secret': secret_key,
+                'enableRateLimit': True,
+                'options': {
+                    'defaultType': 'spot',
+                    'adjustForTimeDifference': True,
+                    'testnet': True
+                },
+                'urls': {
+                    'api': {
+                        'public': 'https://testnet.binance.vision/api',
+                        'private': 'https://testnet.binance.vision/api',
+                        'v3': 'https://testnet.binance.vision/api/v3',
+                        'v1': 'https://testnet.binance.vision/api/v1'
+                    },
+                    'test': {
+                        'public': 'https://testnet.binance.vision/api',
+                        'private': 'https://testnet.binance.vision/api'
+                    }
+                }
+            })
+        else:
+            self.exchange = ccxt.binance({
+                'apiKey': api_key,
+                'secret': secret_key,
+                'enableRateLimit': True
+            })
         
-        self.exchange = ccxt.binance({
-            'apiKey': api_key,
-            'secret': secret_key,
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'spot',
-                'adjustForTimeDifference': True,
-                'testnet': testnet,
-                'urls': urls
-            }
-        })
-        
-        self.exchange.load_markets()  # 거래 가능한 마켓 정보 로드
-        self.trade_history = []  # 거래 내역 저장
+        self.exchange.load_markets()  # 마켓 정보 로드 유지
+        self.trade_history = []
 
     def get_market_price(self, symbol: str) -> float:
         """현재가 조회"""
