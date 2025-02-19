@@ -323,9 +323,14 @@ def display_signals(signals):
             unsafe_allow_html=True
         )
 
-def start_trading(client, llm_provider):
+def start_trading(client, llm_provider, trading_interval):
     """
     트레이딩 실행 함수
+    
+    Args:
+        client: BinanceClient 인스턴스
+        llm_provider: 사용할 LLM 제공자
+        trading_interval: 거래 주기 (초)
     """
     try:
         # 1. 시장 데이터 수집
@@ -396,8 +401,8 @@ def start_trading(client, llm_provider):
         else:
             st.info("현재 매매 시그널이 불일치하거나 관망 중입니다.")
         
-        # 10. 자동 갱신
-        time.sleep(config['trading']['interval'])
+        # 자동 갱신 (거래 주기 사용)
+        time.sleep(trading_interval)
         st.rerun()
         
     except Exception as e:
@@ -426,7 +431,7 @@ def main():
         environment = st.radio(
             "거래 환경 선택",
             ["테스트넷", "실거래"],
-            index=0  # 기본값은 테스트넷
+            index=0
         )
         
         # API 선택
@@ -434,6 +439,17 @@ def main():
             "LLM 선택",
             ["Groq", "OpenAI GPT-4"],
             index=0
+        )
+        
+        # 거래 설정
+        st.header("⚡ 거래 설정")
+        trading_interval = st.slider(
+            "거래 주기 (초)",
+            min_value=10,
+            max_value=300,
+            value=60,
+            step=10,
+            help="각 거래 분석 사이의 대기 시간"
         )
         
         # API 키 입력
@@ -476,8 +492,8 @@ def main():
                 else:
                     os.environ['OPENAI_API_KEY'] = llm_api_key
                 
-                # 트레이딩 시작
-                start_trading(client, llm_provider)
+                # 트레이딩 시작 (거래 주기 전달)
+                start_trading(client, llm_provider, trading_interval)
         else:
             st.info('👈 API 키를 입력하고 트레이딩을 시작하세요.')
 

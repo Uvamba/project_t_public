@@ -43,7 +43,8 @@ class BinanceClient:
                     'defaultType': 'spot',
                     'testnet': True,
                     'adjustForTimeDifference': True,
-                    'createMarketBuyOrderRequiresPrice': False
+                    'createMarketBuyOrderRequiresPrice': False,
+                    'fetchCurrencies': False  # /sapi 엔드포인트 사용 방지
                 },
                 'urls': {
                     'api': {
@@ -68,8 +69,22 @@ class BinanceClient:
                 }
             })
         
-        # 마켓 정보 자동 로드
-        self.exchange.load_markets()
+        # 테스트넷용 기본 마켓 정보 설정
+        if testnet:
+            self.exchange.markets = {
+                'BTC/USDT': {
+                    'id': 'BTCUSDT',
+                    'symbol': 'BTC/USDT',
+                    'base': 'BTC',
+                    'quote': 'USDT',
+                    'precision': {'amount': 8, 'price': 2},
+                    'limits': {'amount': {'min': 0.00001}},
+                    'type': 'spot'
+                }
+            }
+        else:
+            self.exchange.load_markets()  # 실거래의 경우만 load_markets() 사용
+        
         self.trade_history = []
 
     def get_market_price(self, symbol: str) -> float:
