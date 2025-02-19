@@ -353,6 +353,35 @@ def start_trading(client, llm_provider, trading_interval):
         time.sleep(5)
         st.experimental_rerun()
 
+def check_password():
+    """
+    비밀번호 확인 함수
+    """
+    # 세션 상태 초기화
+    if 'password_correct' not in st.session_state:
+        st.session_state.password_correct = False
+    
+    # 이미 인증된 경우
+    if st.session_state.password_correct:
+        return True
+    
+    # 비밀번호 입력
+    st.title('🔒 트레이딩 봇 로그인')
+    password = st.text_input(
+        "비밀번호를 입력하세요", 
+        type="password",
+        help="관리자에게 문의하세요"
+    )
+    
+    # 비밀번호 확인 (환경변수에서 가져오기, 없으면 기본값 사용)
+    if password == os.environ.get('APP_PASSWORD', 'trading2024!'):
+        st.session_state.password_correct = True
+        return True
+    
+    if password:
+        st.error("비밀번호가 일치하지 않습니다")
+    return False
+
 def main():
     """
     메인 대시보드 실행 함수
@@ -364,6 +393,10 @@ def main():
     4. LLM 분석 실행
     5. 결과 표시 및 자동 갱신
     """
+    # 비밀번호 확인
+    if not check_password():
+        st.stop()  # 비밀번호가 틀리면 여기서 실행 중단
+    
     # 메인 타이틀
     st.title('🤖 암호화폐 트레이딩 봇')
     
