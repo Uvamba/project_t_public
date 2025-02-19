@@ -40,20 +40,21 @@ class BinanceClient:
                 'secret': secret_key,
                 'enableRateLimit': True,
                 'options': {
-                    'defaultType': 'future',
+                    'defaultType': 'spot',
                     'adjustForTimeDifference': True,
                     'testnet': True,
                     'createMarketBuyOrderRequiresPrice': False
                 },
                 'urls': {
                     'api': {
-                        'public': 'https://testnet.binancefuture.com/fapi/v1',
-                        'private': 'https://testnet.binancefuture.com/fapi/v1',
-                        'v1': 'https://testnet.binancefuture.com/fapi/v1'
+                        'public': 'https://testnet.binance.vision/api/v3',
+                        'private': 'https://testnet.binance.vision/api/v3',
+                        'v3': 'https://testnet.binance.vision/api/v3',
+                        'v1': 'https://testnet.binance.vision/api/v1'
                     },
                     'test': {
-                        'public': 'https://testnet.binancefuture.com/fapi/v1',
-                        'private': 'https://testnet.binancefuture.com/fapi/v1'
+                        'public': 'https://testnet.binance.vision/api/v3',
+                        'private': 'https://testnet.binance.vision/api/v3'
                     }
                 }
             })
@@ -63,7 +64,7 @@ class BinanceClient:
                 'secret': secret_key,
                 'enableRateLimit': True,
                 'options': {
-                    'defaultType': 'future'
+                    'defaultType': 'spot'
                 }
             })
         
@@ -76,7 +77,7 @@ class BinanceClient:
                 'quote': 'USDT',
                 'precision': {'amount': 8, 'price': 2},
                 'limits': {'amount': {'min': 0.00001}},
-                'type': 'future'
+                'type': 'spot'
             }
         }
         self.trade_history = []
