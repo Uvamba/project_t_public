@@ -11,6 +11,7 @@ LLM 기반 거래 전략 클래스
 from models.llm_interface import LLMAnalyzer
 from models.strategy_generator import StrategyGenerator
 from .technical_indicators import TechnicalAnalysis
+from utils.config import load_config
 
 class LLMStrategy:
     def __init__(self, api_key: str, client, llm_provider: str = "groq"):
@@ -22,6 +23,7 @@ class LLMStrategy:
             client: 거래소 클라이언트
             llm_provider: 사용할 LLM 제공자
         """
+        self.config = load_config()
         self.api_key = api_key
         self.analyzer = LLMAnalyzer(api_key, provider=llm_provider)
         self.generator = StrategyGenerator()

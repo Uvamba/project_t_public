@@ -1,3 +1,5 @@
+# 로컬 개발용 설정 파일
+# .gitignore에 추가하여 Git에서 제외
 binance:
   live:
     api_key: ''

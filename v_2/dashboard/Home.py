@@ -33,11 +33,7 @@ from strategies.binance_client import BinanceClient
 from scripts.fetch_data import fetch_market_data
 from models.groq_interface import GroqInterface
 from strategies.technical_indicators import TechnicalAnalysis
-
-def load_config():
-    """설정 파일 로드"""
-    with open('utils/config.yaml', 'r') as file:
-        return yaml.safe_load(file)
+from utils.config import load_config
 
 def run_trading_page(page_name):
     """트레이딩 페이지 실행"""
