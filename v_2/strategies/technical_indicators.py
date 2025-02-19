@@ -3,19 +3,50 @@ import ta
 import pandas_ta as pta
 from typing import Dict, Any
 
+"""
+기술적 분석 지표 계산 모듈
+RSI, MACD 등 기술적 지표를 계산하고 매매 시그널을 생성
+
+주요 기능:
+1. RSI (상대강도지수) 계산
+2. MACD (이동평균수렴확산) 계산
+3. 매매 시그널 생성
+4. 트렌드 분석
+"""
+
 class TechnicalAnalysis:
     def __init__(self, df: pd.DataFrame):
+        """
+        기술적 분석 클래스 초기화
+        
+        Args:
+            df (pd.DataFrame): OHLCV 데이터가 포함된 DataFrame
+                - timestamp: 시간
+                - open: 시가
+                - high: 고가
+                - low: 저가
+                - close: 종가
+                - volume: 거래량
+        """
         self.df = df
         
     def analyze_rsi_macd(self, timeframe: str = '1h') -> Dict[str, Any]:
         """
-        RSI와 MACD 기반의 실용적인 매매 시그널 분석
+        RSI와 MACD 기반의 매매 시그널 분석
         
         Args:
             timeframe: 분석 시간단위 (1h, 4h, 1d 등)
             
         Returns:
-            Dict: 분석 결과 및 매매 시그널
+            Dict: {
+                'rsi': float,          # 현재 RSI 값
+                'macd': float,         # 현재 MACD 값
+                'macd_signal': float,  # MACD 시그널선
+                'macd_hist': float,    # MACD 히스토그램
+                'signals': List[Dict],  # 매매 시그널 목록
+                'trend': Dict,         # 트렌드 정보
+                'historical_data': pd.DataFrame  # 전체 데이터
+            }
         """
         # 기존 지표 계산
         self.add_rsi()

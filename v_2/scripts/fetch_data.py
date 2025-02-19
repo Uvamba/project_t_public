@@ -47,7 +47,19 @@ def ensure_data_dir():
         os.makedirs(os.path.join(data_dir, 'logs'))
 
 def fetch_market_data():
-    """시장 데이터 수집"""
+    """
+    바이낸스로부터 시장 데이터 수집
+    
+    Returns:
+        pd.DataFrame: {
+            'timestamp': datetime,  # 시간
+            'open': float,         # 시가
+            'high': float,         # 고가
+            'low': float,          # 저가
+            'close': float,        # 종가
+            'volume': float        # 거래량
+        }
+    """
     # 바이낸스 API로부터 데이터 가져오기
     client = ccxt.binance()
     

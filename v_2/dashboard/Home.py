@@ -2,21 +2,21 @@
 트레이딩 봇 메인 대시보드
 시스템 설정과 실행 환경을 관리하는 진입점
 
-# 주요 기능:
-- 실행 환경 관리
-  - 테스트넷/실거래 선택
-  - API 선택 (Groq/OpenAI)
-  - 설정 저장/로드
+주요 기능:
+1. 실시간 시장 데이터 시각화
+   - 캔들스틱 차트
+   - RSI, MACD 지표
+   - 거래량 정보
 
-- 시스템 상태 표시
-  - 현재 실행 상태
-  - 에러/경고 메시지
-  - 버전 정보
+2. 분석 결과 표시
+   - 기술적 분석 시그널
+   - LLM 분석 결과
+   - 시장 트렌드
 
-- 거래 모니터링
-  - 실시간 거래 현황
-  - 포지션 정보
-  - 수익률 분석
+3. 거래 설정 관리
+   - API 키 설정
+   - 거래 환경 선택
+   - 자동 거래 설정
 """
 
 import streamlit as st
@@ -213,8 +213,18 @@ def display_openai_trading():
         time.sleep(5)
         st.experimental_rerun()
 
-def display_charts(df):
-    """차트 표시 함수"""
+def display_charts(df: pd.DataFrame):
+    """
+    차트 시각화 함수
+    
+    Args:
+        df (pd.DataFrame): OHLCV 데이터와 기술적 지표가 포함된 DataFrame
+        
+    표시되는 차트:
+    1. BTC/USDT 캔들스틱
+    2. RSI (14) - 과매수/과매도 기준선 포함
+    3. MACD - 시그널선과 히스토그램
+    """
     # 캔들스틱 차트
     candlestick = go.Figure(data=[
         go.Candlestick(
@@ -317,7 +327,16 @@ def display_signals(signals):
         )
 
 def main():
-    """메인 대시보드"""
+    """
+    메인 대시보드 실행 함수
+    
+    처리 순서:
+    1. 설정 로드 및 UI 구성
+    2. 시장 데이터 수집
+    3. 기술적 분석 수행
+    4. LLM 분석 실행
+    5. 결과 표시 및 자동 갱신
+    """
     st.title('🤖 암호화폐 트레이딩 봇')
     
     # 설정 로드
@@ -390,17 +409,24 @@ def main():
         
         # 차트와 시그널 표시
         display_charts(analysis_result['historical_data'])
-        display_signals(analysis_result['signals'])
         
         # 기술적 분석 결과 표시
         st.subheader("📊 기술적 분석 시그널")
         for signal in analysis_result['signals']:
             st.info(f"**{signal['indicator']}**: {signal['signal']} ({signal['strength']} 강도) → {'🔵 매수 고려' if signal['action'] == 'consider_buy' else '🔴 매도 고려'}")
         
+        # DataFrame을 dictionary 형태로 변환
+        current_data = {
+            'price': df['close'].iloc[-1],
+            'volume': df['volume'].iloc[-1],
+            'bid': df['close'].iloc[-1] * 0.9999,  # 예시값
+            'ask': df['close'].iloc[-1] * 1.0001   # 예시값
+        }
+        
         # LLM 분석 실행 및 표시
         st.subheader("🤖 LLM 분석")
         groq = GroqInterface(config['groq']['api_key'])
-        llm_analysis = groq.analyze_market(df, analysis_result)
+        llm_analysis = groq.analyze_market(current_data, analysis_result)
         st.write(llm_analysis)
         
         # 시장 트렌드 표시

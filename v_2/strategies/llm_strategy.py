@@ -1,22 +1,12 @@
 """
 LLM 기반 거래 전략 클래스
-LLM의 분석을 실제 거래 신호로 변환하고 실행
+기술적 분석과 LLM의 분석을 결합하여 최종 매매 결정
 
-# 주요 기능:
-- LLM 분석 요청
-  - 시장 데이터 전처리
-  - 프롬프트 생성
-  - 응답 처리
-
-- 거래 신호 생성
-  - 텍스트 분석
-  - 매매 시그널 추출
-  - 거래량 결정
-
-- 리스크 관리
-  - 포지션 크기 제한
-  - 손실 제한
-  - 수익 실현
+주요 기능:
+1. 시장 데이터 분석
+2. 매매 신호 검증
+3. 거래 실행 결정
+4. 리스크 관리
 """
 from models.llm_interface import LLMAnalyzer
 from models.strategy_generator import StrategyGenerator
@@ -25,12 +15,12 @@ from .technical_indicators import TechnicalAnalysis
 class LLMStrategy:
     def __init__(self, api_key: str, client, llm_provider: str = "groq"):
         """
-        LLM 기반 전략 초기화
+        LLM 전략 초기화
         
         Args:
-            api_key (str): LLM API 키
-            client: 바이낸스 클라이언트 인스턴스
-            llm_provider (str): 사용할 LLM 제공자
+            api_key: LLM API 키
+            client: 거래소 클라이언트
+            llm_provider: 사용할 LLM 제공자
         """
         self.api_key = api_key
         self.analyzer = LLMAnalyzer(api_key, provider=llm_provider)
@@ -40,7 +30,17 @@ class LLMStrategy:
 
     def analyze_market(self, market_data):
         """
-        시장 데이터 분석 및 전략 생성
+        시장 데이터 종합 분석
+        
+        Args:
+            market_data (pd.DataFrame): OHLCV 데이터
+            
+        Returns:
+            Dict: {
+                'llm_analysis': str,      # LLM 분석 결과
+                'technical_analysis': Dict,  # 기술적 분석 결과
+                'chart_data': pd.DataFrame  # 차트 데이터
+            }
         """
         # 기술적 분석 수행
         self.technical_analysis = TechnicalAnalysis(market_data)
