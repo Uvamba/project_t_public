@@ -44,107 +44,45 @@ def run_trading_page(page_name):
 def display_groq_trading():
     """Groq 트레이딩 화면 표시"""
     try:
-        # 설정 파일 로드
-        config = load_config()
+        # 메인 컨테이너에 결과 표시
+        main_container = st.container()
         
-        # Groq API 키 설정
-        st.sidebar.header('⚙️ API 설정')
-        groq_api_key = st.sidebar.text_input(
-            'Groq API Key',
-            value=config['groq'].get('api_key', ''),
-            type='password'
-        )
-        
-        # 거래 설정
-        st.sidebar.header('거래 설정')
-        interval = st.sidebar.slider(
-            '분석 주기 (초)',
-            min_value=5,
-            max_value=60,
-            value=config['trading']['interval']
-        )
-        
-        # 바이낸스 클라이언트 초기화
-        client = BinanceClient(
-            api_key=config['binance'][st.session_state.environment]['api_key'],
-            secret_key=config['binance'][st.session_state.environment]['secret_key'],
-            testnet=(st.session_state.environment == 'testnet')
-        )
-        
-        # 시장 데이터 수집
-        market_data = fetch_market_data()
-        
-        # 현재 포지션 정보
-        position = client.get_position('BTC/USDT')
-        
-        # 지표 표시
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("현재가", f"${market_data['price']:,.2f}")
-        with col2:
-            st.metric("BTC 보유량", f"{position['base']['total']:.3f} BTC")
-        with col3:
-            st.metric("USDT 잔고", f"${position['quote']['free']:,.2f}")
-        with col4:
-            st.metric("거래량", f"${market_data['volume']:,.2f}")
-        
-        # 차트 섹션
-        st.subheader("📈 시장 데이터")
-        
-        # OHLCV 데이터 가져오기
-        ohlcv = client.get_ohlcv('BTC/USDT', '1h', 100)
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        
-        # 캔들스틱 차트
-        fig = go.Figure(data=[
-            go.Candlestick(
-                x=df['timestamp'],
-                open=df['open'],
-                high=df['high'],
-                low=df['low'],
-                close=df['close'],
-                name='OHLC'
-            )
-        ])
-        
-        fig.update_layout(
-            title="BTC/USDT 가격 차트",
-            yaxis_title="가격 (USDT)",
-            xaxis_title="시간",
-            height=600
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # LLM 분석 섹션
-        st.subheader("🤖 LLM 분석")
-        
-        # Groq 인터페이스 초기화
-        groq = GroqInterface(groq_api_key)
-        
-        # 시장 분석 실행
-        with st.spinner("시장 분석 중..."):
-            analysis = groq.analyze_market(market_data, df)
-            st.markdown(analysis)
-        
-        # 거래 통계
-        st.subheader("📊 거래 통계")
-        stats = client.get_trade_stats()
-        
-        stat_col1, stat_col2, stat_col3 = st.columns(3)
-        with stat_col1:
-            st.metric("총 거래 횟수", f"{stats['total_trades']}회")
-            st.metric("매수 횟수", f"{stats['buy_trades']}회")
-        
-        with stat_col2:
-            st.metric("거래 성공률", f"{stats['success_rate']:.1f}%")
-            st.metric("매도 횟수", f"{stats['sell_trades']}회")
-        
-        with stat_col3:
-            st.metric("총 거래대금", f"${stats['total_volume']:,.2f}")
-            st.metric("평균 거래량", f"{stats['avg_trade_size']:.4f} BTC")
+        with main_container:
+            # 설정 파일 로드
+            config = load_config()
             
+            # 거래 설정
+            interval = st.slider(
+                '분석 주기 (초)',
+                min_value=5,
+                max_value=60,
+                value=config['trading']['interval']
+            )
+            
+            # 바이낸스 클라이언트 초기화
+            client = BinanceClient(
+                api_key=config['binance'][st.session_state.environment]['api_key'],
+                secret_key=config['binance'][st.session_state.environment]['secret_key'],
+                testnet=(st.session_state.environment == 'testnet')
+            )
+            
+            # 시장 데이터 수집
+            market_data = fetch_market_data()
+            
+            # 현재 포지션 정보
+            position = client.get_position('BTC/USDT')
+            
+            # 지표 표시
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("현재가", f"${market_data['price']:,.2f}")
+            with col2:
+                st.metric("BTC 보유량", f"{position['base']['total']:.3f} BTC")
+            with col3:
+                st.metric("USDT 잔고", f"${position['quote']['free']:,.2f}")
+            with col4:
+                st.metric("거래량", f"${market_data['volume']:,.2f}")
+        
         # 자동 새로고침
         time.sleep(interval)
         st.experimental_rerun()
@@ -326,91 +264,87 @@ def display_signals(signals):
 def start_trading(client, llm_provider, trading_interval):
     """
     트레이딩 실행 함수
-    
-    Args:
-        client: BinanceClient 인스턴스
-        llm_provider: 사용할 LLM 제공자
-        trading_interval: 거래 주기 (초)
     """
     try:
-        # 1. 시장 데이터 수집
-        df = fetch_market_data()
+        # 메인 컨테이너에 결과 표시
+        main_container = st.container()
         
-        # 2. 기술적 분석 수행
-        analysis = TechnicalAnalysis(df)
-        analysis_result = analysis.analyze_rsi_macd()
-        
-        # 3. 현재 포지션 및 기본 지표 표시
-        position = client.get_position('BTC/USDT')
-        current_data = df.iloc[-1]
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("현재가", f"${current_data['close']:,.2f}")
-        with col2:
-            st.metric("BTC 보유량", f"{position['base']['total']:.3f} BTC")
-        with col3:
-            st.metric("USDT 잔고", f"${position['quote']['free']:,.2f}")
-        with col4:
-            st.metric("거래량", f"${current_data['volume']:,.2f}")
-        
-        # 4. 차트 표시
-        display_charts(analysis_result['historical_data'])
-        
-        # 5. LLM 분석 수행
-        current_data = {
-            'price': df['close'].iloc[-1],
-            'volume': df['volume'].iloc[-1],
-            'bid': df['close'].iloc[-1] * 0.9999,
-            'ask': df['close'].iloc[-1] * 1.0001
-        }
-        
-        config = load_config()
-        llm = GroqInterface(config['groq']['api_key']) if llm_provider == "Groq" else OpenAIInterface(config['openai']['api_key'])
-        llm_analysis = llm.analyze_market(current_data, analysis_result)
-        
-        # LLM 분석 결과 처리 수정
-        if isinstance(llm_analysis, str):
-            # 문자열인 경우 기본값 설정
-            llm_signal = 'hold'
-            llm_analysis_text = llm_analysis
-        else:
-            # 딕셔너리인 경우
-            llm_signal = llm_analysis.get('action', 'hold')
-            llm_analysis_text = str(llm_analysis)
-        
-        # 6. 교차 검증 및 매매 결정
-        technical_signal = analysis_result['signals'][0]['action']
-        
-        # 7. 분석 결과 표시
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("📊 기술적 분석")
-            st.write(f"시그널: {technical_signal}")
-            display_signals(analysis_result['signals'])
+        with main_container:
+            # 1. 시장 데이터 수집
+            df = fetch_market_data()
             
-        with col2:
-            st.subheader("🤖 LLM 분석")
-            st.write(f"제안: {llm_signal}")
-            st.write(llm_analysis_text)
+            # 2. 기술적 분석 수행
+            analysis = TechnicalAnalysis(df)
+            analysis_result = analysis.analyze_rsi_macd()
+            
+            # 3. 현재 포지션 및 기본 지표 표시
+            position = client.get_position('BTC/USDT')
+            current_data = df.iloc[-1]
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("현재가", f"${current_data['close']:,.2f}")
+            with col2:
+                st.metric("BTC 보유량", f"{position['base']['total']:.3f} BTC")
+            with col3:
+                st.metric("USDT 잔고", f"${position['quote']['free']:,.2f}")
+            with col4:
+                st.metric("거래량", f"${current_data['volume']:,.2f}")
+            
+            # 4. 차트 표시
+            display_charts(analysis_result['historical_data'])
+            
+            # 5. LLM 분석 수행
+            current_data = {
+                'price': df['close'].iloc[-1],
+                'volume': df['volume'].iloc[-1],
+                'bid': df['close'].iloc[-1] * 0.9999,
+                'ask': df['close'].iloc[-1] * 1.0001
+            }
+            
+            config = load_config()
+            llm = GroqInterface(config['groq']['api_key']) if llm_provider == "Groq" else OpenAIInterface(config['openai']['api_key'])
+            llm_analysis = llm.analyze_market(current_data, analysis_result)
+            
+            # LLM 분석 결과 처리
+            if isinstance(llm_analysis, str):
+                llm_signal = 'hold'
+                llm_analysis_text = llm_analysis
+            else:
+                llm_signal = llm_analysis.get('action', 'hold')
+                llm_analysis_text = str(llm_analysis)
+            
+            # 6. 교차 검증 및 매매 결정
+            technical_signal = analysis_result['signals'][0]['action']
+            
+            # 7. 분석 결과 표시
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("📊 기술적 분석")
+                st.write(f"시그널: {technical_signal}")
+                display_signals(analysis_result['signals'])
+                
+            with col2:
+                st.subheader("🤖 LLM 분석")
+                st.write(f"제안: {llm_signal}")
+                st.write(llm_analysis_text)
+            
+            # 8. 시장 트렌드 표시
+            st.subheader("📈 시장 트렌드")
+            st.markdown(
+                f"""<div style='padding: 10px; border-radius: 5px; 
+                background-color: #F5F5F5'>
+                {analysis_result['trend']['description'].upper()}</div>""",
+                unsafe_allow_html=True
+            )
+            
+            # 9. 매매 실행 (시그널이 일치할 경우)
+            if technical_signal == llm_signal and technical_signal != 'hold':
+                st.success(f"매매 시그널 일치: {technical_signal}")
+            else:
+                st.info("현재 매매 시그널이 불일치하거나 관망 중입니다.")
         
-        # 8. 시장 트렌드 표시
-        st.subheader("📈 시장 트렌드")
-        st.markdown(
-            f"""<div style='padding: 10px; border-radius: 5px; 
-            background-color: #F5F5F5'>
-            {analysis_result['trend']['description'].upper()}</div>""",
-            unsafe_allow_html=True
-        )
-        
-        # 9. 매매 실행 (시그널이 일치할 경우)
-        if technical_signal == llm_signal and technical_signal != 'hold':
-            st.success(f"매매 시그널 일치: {technical_signal}")
-            # TODO: 실제 매매 실행 로직 구현
-        else:
-            st.info("현재 매매 시그널이 불일치하거나 관망 중입니다.")
-        
-        # 자동 갱신 (experimental_rerun 사용)
+        # 자동 갱신
         time.sleep(trading_interval)
         st.experimental_rerun()
         
